@@ -6,9 +6,10 @@ group :development do
   gem 'bundler'
   gem 'jeweler'
   gem 'savon'
+  gem 'jdbc-sqlite3'
   gem 'ruby-debug'
-  gem 'sequel'
-  gem 'vacuum'
+  gem 'httpclient'
+  gem 'ruby-wpdb'
 end
 
 gem 'require_all'
