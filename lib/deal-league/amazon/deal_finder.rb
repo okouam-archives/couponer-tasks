@@ -13,111 +13,61 @@ module Amazon
 
     CURL_OPTS = '--location --digest -k --progress-bar'
 
-    def find_deals(login, password, filename)
+    @logger = Logger.new(STDOUT)
 
-      @logger = Logger.new(STDOUT)
+    def self.find_deals(login, password, filename = nil)
 
-      # Number of deals found in the feed
-      @deal_count = 0
-
-      # Cache for geographies for faster data insertion
-      @geographies = {}
-
-      # Cache for categories for faster data insertion
-      @categories = {}
+      filename = filename || Tempfile.new('deal-league')
 
       @logger.info "Finding deals from Amazon Local using login #{login} and password #{password}"
 
       download_file(login, password, filename)
 
-      parse_deals(filename)
+      deal_count = parse_deals(filename)
 
       @logger.info 'Deal retrieval is complete'
 
-    end
-
-    private
-
-    def download_file(login, password, filename)
-
-      @logger.info "Downloading to the file #{filename}"
-
-      `curl #{CURL_OPTS} -o #{filename} --user #{login}:#{password} "#{FEED_URL}"`
-
-      @logger.info 'Amazon Local deals downloaded'
+      deal_count
 
     end
 
-    def parse_deals(filename)
+    def self.parse_deals(filename)
+      deal_count = 0
       Zlib::GzipReader.open(filename) do |gz|
         contents = JSON.parse(gz.read)
         deals = contents['deals']
-        @logger.info "Parsing #{deals.length} deals"
+        @logger.info "Parsing #{deals.length} deals from Amazon"
         deals.each do |deal|
           begin
-            @deal_count = @deal_count + 1
+            deal_count = deal_count + 1
             post = create_deal(deal)
-            create_categories(post, deal['category']['path'])
-            create_geographies(post, deal['geographies'])
-            create_redemption_locations(post, deal['redemptionLocations'])
+            deal['category']['path'].each {|category| Categories.create(post, category)}
+            deal['geographies'].each {|geography| Geographies.create(post, geography['displayName'])}
+            deal['redemptionLocations'].each {|location| RedemptionLocations.create(post, location)}
           rescue => e
-            @logger.error("Unable to parse deal #{@deal_count} with title #{deal['websiteTitle']} and ASIN #{deal['asin']} ending at #{Time.at(deal['offerEndTime'] / 1000)}")
+            @logger.error("Unable to parse deal #{deal_count} with title #{deal['websiteTitle']} and ASIN #{deal['asin']} ending at #{Time.at(deal['offerEndTime'] / 1000)}")
             @logger.error(e)
           end
         end
         gz.close
+        deal_count
       end
     end
 
-    def create_categories(post, categories)
-      categories.each do |category|
-        term = WPDB::Term.find(:name => category)
-        if term
-          taxonomy = WPDB::TermTaxonomy.find(:term_id => term.term_id, :taxonomy => 'category')
-        else
-          term = WPDB::Term.create(:name => category) unless term
-          taxonomy = WPDB::TermTaxonomy.create(:term_id => term.term_id, :taxonomy => 'category')
-        end
-        post.add_termtaxonomy(taxonomy)
-        post.save
-      end
+    private
+
+    def self.download_file(login, password, filename)
+      @logger.info "Downloading to the file #{filename}"
+      `curl #{CURL_OPTS} -o #{filename} --user #{login}:#{password} "#{FEED_URL}"`
+      @logger.info 'Amazon Local deals downloaded'
     end
 
-    def create_geographies(post, geographies)
-      geographies.each do |geography|
-        term = WPDB::Term.find(:name => geography['displayName'])
-        if term
-          taxonomy = WPDB::TermTaxonomy.find(:term_id => term.term_id, :taxonomy => 'geography')
-        else
-          term = WPDB::Term.create(:name => geography['displayName']) unless term
-          taxonomy = WPDB::TermTaxonomy.create(:term_id => term.term_id, :taxonomy => 'geography')
-        end
-        post.add_termtaxonomy(taxonomy)
-        post.save
-      end
-    end
-
-    def create_redemption_locations(parent, redemption_locations)
-      redemption_locations.each do |location|
-        post = WPDB::Post.create(:post_title => SecureRandom.hex, :post_type => 'location')
-        post.add_postmeta(:meta_key => 'addressPostalCode', :meta_value => location['addressPostalCode'])
-        post.add_postmeta(:meta_key => 'addressStateOrProvince', :meta_value => location['addressStateOrProvince'])
-        post.add_postmeta(:meta_key => 'addressStreet1', :meta_value => location['addressStreet1'])
-        post.add_postmeta(:meta_key => 'addressStreet2', :meta_value => location['addressStreet2'])
-        post.add_postmeta(:meta_key => 'latitude', :meta_value => location['latitude'])
-        post.add_postmeta(:meta_key => 'longitude', :meta_value => location['longitude'])
-        debugger
-        post.add_postmeta(:meta_key => 'deal', :meta_value => parent.ID)
-        post.save
-      end
-    end
-
-    def create_deal(deal)
+    def self.create_deal(deal)
       website_title = deal['websiteTitle']
       @logger.debug "Deal #{@deal_count}: #{website_title} ending at #{get_timestamp(deal['offerEndTime'])}"
       description = deal['description']
       post = WPDB::Post.create(:post_title => website_title, :post_content => description)
-      post.add_postmeta(:meta_key => 'asin', :meta_value => deal['asin'])
+      post.add_postmeta(:meta_key => 'uniqueid', :meta_value => deal['asin'])
       post.add_postmeta(:meta_key => 'merchant', :meta_value => deal['merchant']['displayName'])
       post.add_postmeta(:meta_key => 'imageUrl', :meta_value => deal['imageUrl'])
       post.add_postmeta(:meta_key => 'finePrint', :meta_value => deal['finePrint'])
@@ -127,7 +77,7 @@ module Amazon
       post.save
     end
 
-    def get_timestamp(value)
+    def self.get_timestamp(value)
       Time.at(value / 1000)
     end
 

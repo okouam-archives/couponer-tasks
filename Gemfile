@@ -6,6 +6,7 @@ group :development do
   gem 'jeweler'
   gem 'ruby-wpdb'
   gem 'pry'
+  gem 'savon'
   gem 'pry-debugger'
   gem 'logger-colors'
 end
