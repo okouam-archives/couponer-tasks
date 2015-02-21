@@ -7,7 +7,7 @@ group :development do
   gem 'ruby-wpdb'
   gem 'pry'
   gem 'savon'
-  gem 'pry-debugger'
+  gem 'rubypress'
   gem 'logger-colors'
 end
 

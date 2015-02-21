@@ -66,7 +66,14 @@ module Amazon
       website_title = deal['websiteTitle']
       @logger.debug "Deal #{@deal_count}: #{website_title} ending at #{get_timestamp(deal['offerEndTime'])}"
       description = deal['description']
-      post = WPDB::Post.create(:post_title => website_title, :post_content => description)
+      post = WPDB::Post.create(:post_title => website_title, 
+        :to_ping => '',
+        :pinged => '',
+        :post_modified => Time.now,
+        :post_modified_gmt => Time.now,
+        :post_content_filtered => description,
+        :post_content => description, 
+        :post_excerpt => description)
       post.add_postmeta(:meta_key => 'uniqueid', :meta_value => deal['asin'])
       post.add_postmeta(:meta_key => 'merchant', :meta_value => deal['merchant']['displayName'])
       post.add_postmeta(:meta_key => 'imageUrl', :meta_value => deal['imageUrl'])

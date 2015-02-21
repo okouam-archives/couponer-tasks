@@ -18,7 +18,14 @@ module ShopWindow
       logger.info("#{products.size} available products have been identified for #{merchant_name}")
       products.each do |product|
         begin
-          post = WPDB::Post.create(:post_title => "#{product['id']}: #{product.css('name').text}" , :post_content => product.css('desc').text)
+          post = WPDB::Post.create(:post_title => "#{product['id']}: #{product.css('name').text}", 
+            :to_ping => '',
+            :post_modified_gmt => Time.now,
+            :post_modified => Time.now,
+            :pinged => '',
+            :post_content_filtered => product.css('desc').text,
+            :post_content => product.css('desc').text,
+            :post_excerpt => product.css('desc').text)
           post.add_postmeta(:meta_key => 'uniqueid', :meta_value => product['id'])
           post.add_postmeta(:meta_key => 'merchant', :meta_value => merchant_name)
           post.add_postmeta(:meta_key => 'imageUrl', :meta_value => product.css('awImage').text)
