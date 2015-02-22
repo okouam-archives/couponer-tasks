@@ -3,6 +3,7 @@ require 'json'
 require 'logger'
 require 'ruby-wpdb'
 require 'logger/colors'
+require 'eventful'
 require 'securerandom'
 
 module Couponer
@@ -30,15 +31,10 @@ module Couponer
           deals.each do |deal|
             begin
               deal_count = deal_count + 1
-              post = create_deal(deal)
-              deal['category']['path'].each do |category| 
-                  category = Category.create(post, category)
-                  category.add(post)
-              end
-              deal['geographies'].each  do |geography| 
-                  geography = Geography.create(post, geography['displayName'])
-              end
-              deal['redemptionLocations'].each {|location| RedemptionLocation.create(post, location)}
+              deal_id = create_deal(deal)
+              TermTaxonomy.assign(deal_id, deal['category']['path'], 'category')
+              TermTaxonomy.assign(deal_id, deal['geographies'].map{|x|x['displayName']}, 'geography')
+              deal['redemptionLocations'].each {|location| Shop.create(deal_id, location)}
             rescue => e
               @logger.error("Unable to parse deal #{deal_count} with title #{deal['websiteTitle']} and ASIN #{deal['asin']} ending at #{Time.at(deal['offerEndTime'] / 1000)}")
               @logger.error(e)
@@ -76,6 +72,7 @@ module Couponer
         post.add_postmeta(:meta_key => 'price', :meta_value => deal['options'][0]['price']['amountInBaseUnit'])
         post.add_postmeta(:meta_key => 'value', :meta_value => deal['options'][0]['value']['amountInBaseUnit'])
         post.save
+        post.id
       end
 
     end

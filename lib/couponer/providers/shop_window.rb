@@ -68,7 +68,7 @@ module Couponer
             post.save
             counter = counter + 1
           rescue => e
-            fire(:error, counter, product.css('name').text}, product['id'])
+            fire(:error, counter, product.css('name').text, product['id'])
           end
         end
         counter

@@ -8,7 +8,9 @@ group :development do
   gem 'pry'
   gem 'savon'
   gem 'rubypress'
+  gem 'awesome_print'
   gem 'logger-colors'
+  gem 'eventful'
 end
 
 gem 'require_all'

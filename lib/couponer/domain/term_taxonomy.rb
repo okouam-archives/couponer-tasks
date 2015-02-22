@@ -1,25 +1,34 @@
+require 'awesome_print'
+
 module Couponer
   module Domain
     class TermTaxonomy
-  
-      @terms = {}
-      @term_taxonomies = {}
-    
-      def self.create(key, label)
-        if @terms.has_key?(key)
-          term_id = @terms[key].term_id
-          taxonomy = @term_taxonomies[term_id]
-        else
-          term = WPDB::Term.find(:name => key)
-          if term
-            taxonomy = WPDB::TermTaxonomy.find(:term_id => term.term_id, :taxonomy => label)
-          else
-            term = WPDB::Term.create(:name => key) unless term
-            taxonomy = WPDB::TermTaxonomy.create(:term_id => term.term_id, :taxonomy => label)
-          end
-          @terms[key] = term
-          @term_taxonomies[term.term_id] = taxonomy
+   
+      def self.assign(deal_id, terms, taxonomy)
+        api = Couponer::API.new.client
+        self.ensure_taxonomy_exists(api, taxonomy)
+        self.ensure_terms_exist(api, terms, taxonomy)
+        api.editPost(:post_id => deal_id, :content => {:terms_names => {"#{taxonomy}" => [terms]}})
+      end
+   
+      private
+      
+      def self.ensure_terms_exist(api, terms, taxonomy)
+        terms.each do |term|
+          ensure_term_exists(api, term, taxonomy)   
         end
+      end
+      
+      def ensure_term_exists(api, term, taxonomy)
+        unless api.getTerms(:taxonomy => taxonomy).any? {|t| t['name'] == term}
+          api.newTerm(:content => {:name => term, :taxonomy => taxonomy})
+        end     
+      end
+    
+      def self.check_taxonomy_exists(api, taxonomy)
+         unless api.getTaxonomies.any?{|t| t['name'] == taxonomy}
+           raise "Unknown taxonomy: " . taxonomy
+         end
       end
     
     end
