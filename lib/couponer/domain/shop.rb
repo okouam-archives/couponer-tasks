@@ -3,15 +3,15 @@ module Couponer
     class Shop
 
       def self.create(deal_id, location)
-        post = WPDB::Post.create(:post_title => SecureRandom.hex, :post_type => 'location')
-        post.add_postmeta(:meta_key => 'addressPostalCode', :meta_value => location['addressPostalCode'])
-        post.add_postmeta(:meta_key => 'addressStateOrProvince', :meta_value => location['addressStateOrProvince'])
-        post.add_postmeta(:meta_key => 'addressStreet1', :meta_value => location['addressStreet1'])
-        post.add_postmeta(:meta_key => 'addressStreet2', :meta_value => location['addressStreet2'])
-        post.add_postmeta(:meta_key => 'latitude', :meta_value => location['latitude'])
-        post.add_postmeta(:meta_key => 'longitude', :meta_value => location['longitude'])
-        post.add_postmeta(:meta_key => 'deal', :meta_value => deal_id)
-        post.save
+        Couponer::Domain::Post.create(SecureRandom.hex, SecureRandom.hex, 'shop', {
+          'addressPostalCode' => location['addressPostalCode'],
+          'addressStateOrProvince' => location['addressStateOrProvince'],
+          'addressStreet1' => location['addressStreet1'],
+          'addressStreet2' => location['addressStreet2'],
+          'latitude' => location['latitude'],
+          'longitude'=> location['longitude'],
+          'deal' => deal_id
+        })
       end
 
     end

@@ -4,9 +4,6 @@ module Couponer
     
     attr_reader :client
   
-    def self.clear_taxonomies
-    end
-  
     def initialize
       username = ENV['COUPONER_USERNAME']
       password = ENV['COUPONER_PASSWORD']
