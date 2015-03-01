@@ -10,47 +10,29 @@ module Couponer
   module Providers
     class Amazon
       include Eventful
+      
+      attr_accessor :deal_limit 
 
       FEED_URL = 'https://assoc-datafeeds-eu.amazon.com/datafeed/getFeed?filename=GB_localdeals.json.gz'
       CURL_OPTS = '--location --digest -k --progress-bar'
 
-      def self.find_deals(login, password, filename = nil)
+      def find_deals(login, password, filename = nil)
         fire(:started)
         filename = download_file(login, password, filename)
         parse_deals(filename)
         fire(:ended)
       end
 
-      def self.parse_deals(filename)
+      def parse_deals(filename)
         Zlib::GzipReader.open(filename) do |gz|
           contents = JSON.parse(gz.read)
           deals = contents['deals']
           fire(:products_found, deals.length)
+          counter = 0
           deals.each do |deal|
-            begin
-              post = Post.create(
-                  deal['websiteTitle'], 
-                  deal['description'],
-                  nil,
-                  {
-                    'uniqueid' => deal['asin'],
-                    'merchant' => deal['merchant']['displayName'],
-                    'imageUrl' => deal['imageUrl'],
-                    'finePrint' => deal['finePrint'],
-                    'offerEndTime' => Time.at(deal['offerEndTime'] / 1000),
-                    'price' => deal['options'][0]['price']['amountInBaseUnit'],
-                    'value' => deal['options'][0]['value']['amountInBaseUnit']
-                  })        
-                        
-              TermTaxonomy.assign(post['post_id'], {
-                'category' => deal['category']['path'], 
-                'geography' => deal['geographies'].map{|x|x['displayName']}
-                })
-              
-              deal['redemptionLocations'].each {|location| Shop.create(post['post_id'], location)}
-            rescue => e
-              fire(:error, deal, e)
-            end
+            save_post(deal)
+            counter = counter + 1
+            break if @deal_limit && counter == @deal_limit 
           end
           gz.close
         end
@@ -58,11 +40,32 @@ module Couponer
 
       private
 
-      def self.download_file(login, password, filename)
+      def save_post(deal)
+        post_id = Couponer::Domain::DailyOffer.create(
+            deal['websiteTitle'], 
+            deal['description'],
+            {
+              'uniqueid' => deal['asin'],
+              'merchant' => deal['merchant']['displayName'],
+              'imageUrl' => deal['imageUrl'],
+              'finePrint' => deal['finePrint'],
+              'offerEndTime' => Time.at(deal['offerEndTime'] / 1000),
+              'price' => deal['options'][0]['price']['amountInBaseUnit'],
+              'value' => deal['options'][0]['value']['amountInBaseUnit']
+            },
+            {
+              'product' => deal['category']['path'].map{|x|x.sub("&", "and")}, 
+              'geography' => deal['geographies'].map{|x|x['displayName'].sub("&", "and")}
+            })        
+        deal['redemptionLocations'].each {|location| Couponer::Domain::Shop.create(post_id, location)}    
+      end
+
+      def download_file(login, password, filename)
         filename = filename || Tempfile.new('deal-league')
         fire(:download_started, login, password, filename)
         `curl #{CURL_OPTS} -o #{filename} --user #{login}:#{password} "#{FEED_URL}"`
         fire(:download_complete, filename)
+        filename
       end
 
     end

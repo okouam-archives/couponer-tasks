@@ -4,35 +4,48 @@ module Couponer
   module Domain
     class TermTaxonomy
    
-      def self.assign(deal_id, term_names)
+      @@categories = {}
+      @@lookup = {}
+      
+      def self.assign(term_names)
         api = Couponer::API.new.client
-        self.ensure_taxonomy_exists(api, term_names.keys)
+        cache_taxonomies(api) unless @@lookup.entries.any?
         self.ensure_terms_exist(api, term_names)
-        api.editPost(:post_id => deal_id, :content => {:terms_names => term_names})
       end
    
       private
       
+      def self.cache_taxonomies(api)
+        terms = api.getTerms(:taxonomy => 'category')
+        refresh(api, 'geography', terms)
+        refresh(api, 'product', terms)
+        terms.each do |term|
+          parent_id = term['parent']
+          name = term['name']
+          @@categories[parent_id] << name if @@lookup.has_key?(parent_id)
+        end
+      end
+      
       def self.ensure_terms_exist(api, term_names)
-        term_names.each do |taxonomy, terms|
+        term_names.each do |parent, terms|
+          parent_id = @@lookup[parent]
+          raise "Parent term <#{parent}> does not exist." unless parent_id
           terms.each do |term|
-            ensure_term_exists(api, term, taxonomy)   
+            cache = @@categories[parent_id]
+            unless cache.include?(term)
+              api.newTerm(:content => {:name => term, :taxonomy => 'category', :parent => parent_id})
+              cache << term 
+            end 
           end
         end
       end
       
-      def self.ensure_term_exists(api, term, taxonomy)
-        unless api.getTerms(:taxonomy => taxonomy).any? {|t| t['name'] == term}
-          api.newTerm(:content => {:name => term, :taxonomy => taxonomy})
-        end     
-      end
-    
-      def self.ensure_taxonomy_exists(api, term_names)
-        term_names.each do |taxonomy|
-         unless api.getTaxonomies.any?{|t| t['name'] == taxonomy}
-           raise "Unknown taxonomy: " + taxonomy
-         end
-       end
+      def self.refresh(api, parent, terms)
+        term = terms.find {|term| term['name'] == parent}
+        id = term ? term['term_id'] : api.newTerm(:content => {:name => parent, :taxonomy => 'category'})
+        @@lookup[id] = parent
+        @@lookup[parent] = id
+        @@categories[id] = []
       end
     
     end

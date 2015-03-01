@@ -28,6 +28,7 @@ GEM
       builder (>= 2.1.2)
     hashie (3.4.0)
     highline (1.6.21)
+    hirb (0.7.3)
     httpi (2.3.0)
       rack
     jeweler (2.0.1)
@@ -44,6 +45,8 @@ GEM
     logger-colors (1.0.0)
     macaddr (1.7.1)
       systemu (~> 2.6.2)
+    method_profiler (2.0.1)
+      hirb (>= 0.6.0)
     method_source (0.8.2)
     methodphitamine (1.0.0)
     mime-types (1.25.1)
@@ -107,6 +110,7 @@ GEM
     sequel_sluggable (0.0.6)
       sequel (>= 3.0.0)
     slop (3.6.0)
+    stringex (2.5.2)
     systemu (2.6.4)
     thor (0.19.1)
     thread_safe (0.3.4)
@@ -126,9 +130,11 @@ DEPENDENCIES
   eventful
   jeweler
   logger-colors
+  method_profiler
   pry
   require_all
   rspec
   ruby-wpdb
   rubypress
   savon
+  stringex

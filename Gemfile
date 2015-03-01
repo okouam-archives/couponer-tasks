@@ -9,7 +9,9 @@ group :development do
   gem 'savon'
   gem 'rubypress'
   gem 'awesome_print'
+  gem 'method_profiler'
   gem 'logger-colors'
+  gem 'stringex'
   gem 'eventful'
 end
 

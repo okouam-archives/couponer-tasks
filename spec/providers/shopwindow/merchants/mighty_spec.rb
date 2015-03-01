@@ -1,29 +1,14 @@
 require 'spec_helper'
+require_relative 'helpers'
 
-describe ShopWindow::Handler do
+describe Couponer::Providers::ShopWindow do
 
-  before(:all) do
-    @file = File.open('spec/fixtures/shopwindow/mighty_deals.xml', 'rb')
-    @contents = @file.read
-    @logger = Logger.new(STDOUT)
-  end
+  describe 'when finding Mighty deals' do
 
-  after(:all) do
-    @file.close
-  end
-
-  before(:each) do
-    init_wordpress
-  end
-
-  describe 'when processing deals' do
-
-    it 'handles all deals found in the feed' do
-      processor = ShopWindow::Handler.new
-      processor.process(@contents, @logger, 'Mighty Deals').should == 52
+    it 'retrieves all available deals' do
+      find_merchant_deals('Mighty Deals')
     end
 
   end
 
 end
-

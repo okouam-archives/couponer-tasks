@@ -1,29 +1,14 @@
 require 'spec_helper'
+require_relative 'helpers'
 
-describe ShopWindow::Handler do
+describe Couponer::Providers::ShopWindow do
 
-  before(:all) do
-    @file = File.open('spec/fixtures/shopwindow/groupon.xml', 'rb')
-    @contents = @file.read
-    @logger = Logger.new(STDOUT)
-  end
+  describe 'when finding Groupon deals' do
 
-  after(:all) do
-    @file.close
-  end
-
-  before(:each) do
-    init_wordpress
-  end
-
-  describe 'when processing deals' do
-
-    it 'handles all deals found in the feed' do
-      processor = ShopWindow::Handler.new
-      processor.process(@contents, @logger, 'Groupon')
+    it 'retrieves all available deals' do
+      find_merchant_deals('Groupon')
     end
 
   end
 
 end
-
